@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Máy Tính tay</title>
+<link rel="icon" href="Chanh.png" type="image/x-icon">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+
+:root{
+  --bg:#0a0a0f;
+  --glass:rgba(255,255,255,0.04);
+  --glass-border:rgba(255,255,255,0.08);
+  --display-bg:rgba(0,0,0,0.5);
+  --num:#f0f0f5;
+  --op-color:#ff9f0a;
+  --op-bg:rgba(255,159,10,0.15);
+  --op-border:rgba(255,159,10,0.3);
+  --eq-bg:#ff9f0a;
+  --func-bg:rgba(255,255,255,0.08);
+  --func-color:#c8c8d4;
+  --zero-bg:rgba(255,255,255,0.05);
+  --shadow:0 32px 80px rgba(0,0,0,0.8);
+  --glow:0 0 40px rgba(255,159,10,0.08);
+}
+
+html,body{
+  width:100%;height:100%;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Sans',sans-serif;
+  overflow:hidden;
+}
+
+/* Subtle background texture */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 20%, rgba(255,159,10,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 80% 80%, rgba(100,80,255,0.05) 0%, transparent 60%);
+  pointer-events:none;
+}
+
+.calc-wrap{
+  position:relative;
+  width:min(360px, 100vw);
+  padding:0 0 env(safe-area-inset-bottom,0);
+}
+
+.calc{
+  background:rgba(18,18,28,0.95);
+  border:1px solid var(--glass-border);
+  border-radius:32px;
+  overflow:hidden;
+  box-shadow:var(--shadow), var(--glow);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+}
+
+/* ── DISPLAY ── */
+.display{
+  background:var(--display-bg);
+  padding:28px 28px 20px;
+  min-height:140px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  justify-content:flex-end;
+  gap:8px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  position:relative;
+}
+
+.display::after{
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,159,10,0.4),transparent);
+}
+
+.expr{
+  font-family:'DM Mono',monospace;
+  font-size:1rem;
+  font-weight:300;
+  color:rgba(255,255,255,0.35);
+  min-height:22px;
+  word-break:break-all;
+  text-align:right;
+  transition:opacity .15s;
+  letter-spacing:0.02em;
+}
+
+.main-display{
+  font-family:'DM Mono',monospace;
+  font-weight:300;
+  color:var(--num);
+  text-align:right;
+  line-height:1;
+  word-break:break-all;
+  transition:font-size .1s;
+  letter-spacing:-0.02em;
+}
+
+.main-display.size-xl{ font-size:3.6rem; }
+.main-display.size-lg{ font-size:2.8rem; }
+.main-display.size-md{ font-size:2rem; }
+.main-display.size-sm{ font-size:1.5rem; }
+
+.main-display.flash{
+  animation:flash .12s ease;
+}
+@keyframes flash{
+  0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}
+}
+
+.display .status-row{
+  display:flex;width:100%;justify-content:space-between;align-items:center;
+  margin-bottom:2px;
+}
+.mem-indicator{
+  font-family:'DM Mono',monospace;
+  font-size:.65rem;font-weight:400;
+  color:rgba(255,159,10,0.7);
+  opacity:0;transition:opacity .2s;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.mem-indicator.show{opacity:1;}
+.err-indicator{
+  font-size:.65rem;color:#ff453a;
+  font-family:'DM Mono',monospace;
+  opacity:0;transition:opacity .2s;
+  letter-spacing:.05em;
+}
+.err-indicator.show{opacity:1;}
+
+/* ── BUTTONS ── */
+.btns{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:1px;
+  background:rgba(255,255,255,0.04);
+  padding:1px;
+}
+
+.btn{
+  border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  font-weight:400;
+  font-size:1.4rem;
+  height:78px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  transition:filter .1s, transform .08s;
+  user-select:none;
+  -webkit-user-select:none;
+  outline:none;
+  background:rgba(28,28,40,0.9);
+  color:var(--num);
+}
+
+.btn:active{
+  filter:brightness(1.4);
+  transform:scale(.94);
+}
+.btn::after{
+  content:'';
+  position:absolute;inset:0;
+  background:white;opacity:0;
+  transition:opacity .12s;
+}
+.btn:active::after{opacity:.06;}
+
+/* Number buttons */
+.btn.num{
+  background:rgba(28,28,42,0.95);
+  color:var(--num);
+  font-size:1.5rem;
+  font-weight:300;
+  font-family:'DM Mono',monospace;
+}
+.btn.num:hover{background:rgba(40,40,58,0.95);}
+
+/* Zero button spans 2 columns */
+.btn.zero{
+  grid-column:span 2;
+  justify-content:flex-start;
+  padding-left:30px;
+  font-family:'DM Mono',monospace;
+  font-weight:300;
+  font-size:1.5rem;
+}
+
+/* Function buttons (AC, +/-, %) */
+.btn.func{
+  background:rgba(48,48,64,0.95);
+  color:var(--func-color);
+  font-size:1.2rem;
+  font-weight:400;
+}
+.btn.func:hover{background:rgba(62,62,80,0.95);}
+
+/* Operator buttons */
+.btn.op{
+  background:rgba(255,159,10,0.12);
+  color:var(--op-color);
+  font-size:1.7rem;
+  font-weight:300;
+}
+.btn.op:hover{background:rgba(255,159,10,0.2);}
+.btn.op.active-op{
+  background:var(--op-color);
+  color:#1a0e00;
+}
+
+/* Equals */
+.btn.eq{
+  background:var(--eq-bg);
+  color:#1a0e00;
+  font-size:1.7rem;
+  font-weight:400;
+}
+.btn.eq:hover{background:#ffb340;}
+.btn.eq:active{background:#e08800;}
+
+/* Backspace button */
+.btn.back-btn{
+  font-size:1.5rem;
+  color:#ff6b6b;
+}
+.btn.back-btn:hover{ background:rgba(255,107,107,0.12); }
+
+/* Decimal */
+.btn.dot{
+  font-family:'DM Mono',monospace;
+  font-size:1.8rem;
+  font-weight:300;
+  color:var(--num);
+  background:rgba(28,28,42,0.95);
+}
+
+/* Corner radius matching grid position */
+.btn:nth-child(1){border-radius:0;}
+.btn:nth-child(4){border-radius:0;}
+.btn:nth-last-child(2){border-radius:0 0 0 24px;}
+.btn:last-child{border-radius:0 0 24px 0;}
+
+/* ── HISTORY STRIP ── */
+.history-strip{
+  max-height:0;overflow:hidden;
+  transition:max-height .3s ease;
+  background:rgba(0,0,0,0.3);
+}
+.history-strip.open{max-height:120px;}
+.history-inner{
+  padding:10px 20px;
+  display:flex;flex-direction:column;gap:4px;
+  overflow-y:auto;max-height:120px;
+}
+.history-item{
+  font-family:'DM Mono',monospace;
+  font-size:.78rem;color:rgba(255,255,255,0.3);
+  text-align:right;cursor:pointer;
+  transition:color .15s;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.history-item:hover{color:rgba(255,255,255,0.6);}
+.history-item .h-result{color:rgba(255,159,10,0.6);}
+
+/* ── TOP BAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px 0;
+}
+.calc-title{
+  font-size:.7rem;font-weight:400;
+  color:rgba(255,255,255,0.2);letter-spacing:.15em;text-transform:uppercase;
+}
+.history-btn{
+  background:none;border:none;cursor:pointer;
+  color:rgba(255,255,255,0.25);font-size:.75rem;
+  display:flex;align-items:center;gap:4px;
+  font-family:'DM Sans',sans-serif;
+  transition:color .15s;padding:4px;
+}
+.history-btn:hover{color:rgba(255,255,255,0.5);}
+.history-btn svg{width:14px;height:14px;}
+
+/* Keyboard hint */
+.kb-hint{
+  text-align:center;padding:10px;
+  font-size:.6rem;color:rgba(255,255,255,0.1);
+  letter-spacing:.08em;font-family:'DM Mono',monospace;
+}
+</style>
+</head>
+<body>
+<div class="calc-wrap">
+  <div class="calc">
+
+    <div class="topbar">
+      <span class="calc-title">Máy Tính</span>
+      <button class="history-btn" id="hist-toggle" onclick="toggleHistory()" title="Lịch sử">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"></polyline>
+          <path d="M3.51 15a9 9 0 1 0 .49-5H1"></path>
+        </svg>
+        Lịch sử
+      </button>
+    </div>
+
+    <!-- History strip -->
+    <div class="history-strip" id="history-strip">
+      <div class="history-inner" id="history-list"></div>
+    </div>
+
+    <!-- Display -->
+    <div class="display">
+      <div class="status-row">
+        <span class="mem-indicator" id="mem-ind">M</span>
+        <span class="err-indicator" id="err-ind">Lỗi</span>
+      </div>
+      <div class="expr" id="expr"></div>
+      <div class="main-display size-xl" id="disp">0</div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btns">
+      <!-- Row 1 -->
+      <button class="btn func" id="btn-ac"  onclick="pressAC()">AC</button>
+      <button class="btn func"               onclick="pressPlusMinus()">+/−</button>
+      <button class="btn func back-btn"      onclick="pressBack()" title="Xóa 1 chữ số (Backspace)">⌫</button>
+      <button class="btn op"   id="op-div"  onclick="pressOp('÷')">÷</button>
+
+      <!-- Row 2 -->
+      <button class="btn num"               onclick="pressNum('7')">7</button>
+      <button class="btn num"               onclick="pressNum('8')">8</button>
+      <button class="btn num"               onclick="pressNum('9')">9</button>
+      <button class="btn op"  id="op-mul"  onclick="pressOp('×')">×</button>
+
+      <!-- Row 3 -->
+      <button class="btn num"               onclick="pressNum('4')">4</button>
+      <button class="btn num"               onclick="pressNum('5')">5</button>
+      <button class="btn num"               onclick="pressNum('6')">6</button>
+      <button class="btn op"  id="op-sub"  onclick="pressOp('−')">−</button>
+
+      <!-- Row 4 -->
+      <button class="btn num"               onclick="pressNum('1')">1</button>
+      <button class="btn num"               onclick="pressNum('2')">2</button>
+      <button class="btn num"               onclick="pressNum('3')">3</button>
+      <button class="btn op"  id="op-add"  onclick="pressOp('+')">+</button>
+
+      <!-- Row 5 -->
+      <button class="btn num"               onclick="pressNum('0')">0</button>
+      <button class="btn func"              onclick="pressPercent()">%</button>
+      <button class="btn dot"               onclick="pressDot()">.</button>
+      <button class="btn eq"                onclick="pressEquals()">=</button>
+    </div>
+
+  </div>
+  <div class="kb-hint">Hỗ trợ bàn phím • Backspace xóa • Esc reset</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+const S = {
+  cur:     '0',        // current input string
+  prev:    null,       // previous operand (number)
+  op:      null,       // pending operator: '+' '−' '×' '÷'
+  justEq:  false,      // just pressed =
+  newNum:  true,       // next digit starts a new number
+  memory:  0,
+  hasMemory: false,
+  history: [],
+  isError: false,
+};
+
+// ═══════════════════════════════════════════════════
+//  SAFE MATH — no eval, full precision handling
+// ═══════════════════════════════════════════════════
+
+/**
+ * Remove floating-point rounding noise.
+ * e.g. 0.1 + 0.2 = 0.30000000000000004 → 0.3
+ */
+function cleanFloat(n) {
+  if (!isFinite(n)) return n;
+  // Round to 12 significant digits to eliminate floating-point noise
+  return parseFloat(n.toPrecision(12));
+}
+
+function calculate(a, op, b) {
+  a = parseFloat(a);
+  b = parseFloat(b);
+  switch (op) {
+    case '+': return cleanFloat(a + b);
+    case '−': return cleanFloat(a - b);
+    case '×': return cleanFloat(a * b);
+    case '÷':
+      if (b === 0) return (a === 0) ? NaN : Infinity;
+      return cleanFloat(a / b);
+  }
+  return b;
+}
+
+// ═══════════════════════════════════════════════════
+//  DISPLAY
+// ═══════════════════════════════════════════════════
+const dispEl  = document.getElementById('disp');
+const exprEl  = document.getElementById('expr');
+const acBtn   = document.getElementById('btn-ac');
+const memInd  = document.getElementById('mem-ind');
+const errInd  = document.getElementById('err-ind');
+
+/**
+ * Format number theo chuẩn Vietcombank:
+ *   - Dấu phẩy (,) phân cách hàng nghìn
+ *   - Dấu chấm (.) phần thập phân
+ *   - Ví dụ: 15,000,000.01
+ *
+ * @param {string} str      - chuỗi số nội bộ (luôn dùng '.' làm thập phân)
+ * @param {boolean} isTyping - true khi người dùng đang gõ (giữ trailing zeros/dot)
+ */
+function formatNum(str, isTyping = false) {
+  if (str === 'Infinity' || str === '-Infinity') return '∞';
+  if (str === 'NaN') return 'Lỗi';
+
+  const n = parseFloat(str);
+  if (!isFinite(n)) return '∞';
+
+  const abs = Math.abs(n);
+
+  // ── Số rất lớn/nhỏ → scientific notation ──
+  if (abs >= 1e13 || (abs < 1e-6 && abs > 0)) {
+    return n.toExponential(6).replace(/\.?0+e/, 'e');
+  }
+
+  // ── Xác định intPart và decPart ──
+  let intPart, decPart;
+
+  if (isTyping && str.endsWith('.')) {
+    // Vừa gõ dấu chấm
+    intPart = str.slice(0, -1);
+    decPart = null;
+  } else if (isTyping && str.includes('.')) {
+    // Đang gõ phần thập phân — giữ nguyên kể cả trailing zeros
+    const dot = str.indexOf('.');
+    intPart = str.slice(0, dot);
+    decPart = str.slice(dot + 1);
+  } else {
+    // Kết quả hoàn chỉnh: dùng toPrecision(12) để tránh floating-point noise
+    // rồi trim trailing zeros
+    let clean;
+    if (Number.isInteger(n)) {
+      clean = String(n);
+    } else {
+      // toPrecision(12) loại bỏ noise (vd: 0.1+0.2=0.3, không phải 0.30000000000000004)
+      clean = parseFloat(n.toPrecision(12)).toString();
+    }
+    const dot = clean.indexOf('.');
+    if (dot === -1) {
+      intPart = clean; decPart = null;
+    } else {
+      intPart = clean.slice(0, dot);
+      decPart = clean.slice(dot + 1);
+    }
+  }
+
+  // ── Thêm dấu phẩy hàng nghìn ──
+  const sign = intPart.startsWith('-') ? '-' : '';
+  const absInt = intPart.replace('-', '');
+  const withCommas = absInt.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+  // ── Ghép lại ──
+  let result = sign + withCommas;
+  if (decPart !== null && decPart !== undefined) {
+    result += '.' + decPart;
+  } else if (isTyping && str.endsWith('.')) {
+    result += '.';
+  }
+
+  return result;
+}
+
+function updateDisplay() {
+  const raw = S.cur;
+  // isTyping = true khi người dùng đang nhập số (không phải kết quả tính)
+  const isTyping = !S.newNum && !S.justEq;
+  const formatted = formatNum(raw, isTyping);
+
+  dispEl.textContent = formatted;
+
+  // Font size dựa trên độ dài chuỗi có dấu phẩy
+  const len = formatted.length;
+  dispEl.className = 'main-display ' +
+    (len <= 11 ? 'size-xl' : len <= 15 ? 'size-lg' : len <= 20 ? 'size-md' : 'size-sm');
+
+  // AC / C
+  acBtn.textContent = (S.cur !== '0' && !S.newNum && !S.justEq) ? 'C' : 'AC';
+
+  // Expression row — prev là số đã hoàn chỉnh, không cần isTyping
+  if (S.op && S.prev !== null && S.newNum) {
+    exprEl.textContent = formatNum(String(S.prev), false) + ' ' + S.op;
+  } else if (S.justEq) {
+    exprEl.textContent = '';
+  } else {
+    exprEl.textContent = '';
+  }
+
+  // Memory indicator
+  memInd.classList.toggle('show', S.hasMemory && S.memory !== 0);
+
+  // Error indicator
+  const isErr = raw === 'NaN' || raw === 'Infinity' || raw === '-Infinity';
+  S.isError = isErr;
+  errInd.classList.toggle('show', isErr && raw !== 'Infinity');
+}
+
+function flash() {
+  dispEl.classList.remove('flash');
+  void dispEl.offsetWidth; // reflow
+  dispEl.classList.add('flash');
+  setTimeout(() => dispEl.classList.remove('flash'), 150);
+}
+
+function highlightOp(op) {
+  ['add','sub','mul','div'].forEach(id => {
+    document.getElementById('op-'+id)?.classList.remove('active-op');
+  });
+  const map = {'+':'op-add','−':'op-sub','×':'op-mul','÷':'op-div'};
+  if (op && map[op]) document.getElementById(map[op])?.classList.add('active-op');
+}
+
+// ═══════════════════════════════════════════════════
+//  BUTTON HANDLERS
+// ═══════════════════════════════════════════════════
+
+function pressNum(d) {
+  if (S.isError) return;
+
+  if (S.justEq || S.newNum) {
+    S.cur = d === '0' ? '0' : d;
+    S.justEq = false;
+    S.newNum = false;
+  } else {
+    // Max 15 digits
+    const digits = S.cur.replace(/[^0-9]/g, '').length;
+    if (digits >= 15) return;
+    S.cur = S.cur === '0' ? d : S.cur + d;
+  }
+  updateDisplay();
+}
+
+function pressDot() {
+  if (S.isError) return;
+  if (S.justEq || S.newNum) { S.cur = '0.'; S.justEq = false; S.newNum = false; updateDisplay(); return; }
+  if (!S.cur.includes('.')) { S.cur += '.'; }
+  updateDisplay();
+}
+
+function pressOp(op) {
+  if (S.isError && op !== 'AC') return;
+
+  // If we have a pending op and user types another op without =, calculate first
+  if (S.op && !S.newNum) {
+    const result = calculate(S.prev, S.op, S.cur);
+    addHistory(S.prev, S.op, S.cur, result);
+    S.cur = String(result);
+    S.prev = result;
+    flash();
+  } else {
+    S.prev = parseFloat(S.cur);
+  }
+
+  S.op = op;
+  S.newNum = true;
+  S.justEq = false;
+  highlightOp(op);
+  updateDisplay();
+}
+
+function pressEquals() {
+  if (S.isError) return;
+  if (S.op === null) return; // nothing to compute
+
+  const b = S.cur;
+  const result = calculate(S.prev, S.op, b);
+
+  // Build expression for display history
+  addHistory(S.prev, S.op, b, result);
+
+  S.cur = String(result);
+  S.prev = null;
+  S.op = null;
+  S.newNum = true;
+  S.justEq = true;
+  highlightOp(null);
+  flash();
+  updateDisplay();
+}
+
+function pressAC() {
+  if (S.cur !== '0' && !S.newNum && !S.justEq) {
+    // C: clear current entry only
+    S.cur = '0';
+    S.newNum = false;
+    S.isError = false;
+  } else {
+    // AC: full reset
+    S.cur = '0';
+    S.prev = null;
+    S.op = null;
+    S.newNum = true;
+    S.justEq = false;
+    S.isError = false;
+    highlightOp(null);
+  }
+  updateDisplay();
+}
+
+function pressPlusMinus() {
+  if (S.isError) return;
+  if (S.cur === '0') return;
+  if (S.cur.startsWith('-')) {
+    S.cur = S.cur.slice(1);
+  } else {
+    S.cur = '-' + S.cur;
+  }
+  S.justEq = false;
+  updateDisplay();
+}
+
+function pressPercent() {
+  if (S.isError) return;
+  const n = parseFloat(S.cur);
+  if (S.op && S.prev !== null) {
+    // e.g. 200 + 5% = 200 + 10 (5% of 200)
+    S.cur = String(cleanFloat(S.prev * n / 100));
+  } else {
+    S.cur = String(cleanFloat(n / 100));
+  }
+  S.justEq = false;
+  S.newNum = false;
+  updateDisplay();
+}
+
+// Backspace
+function pressBack() {
+  if (S.isError) { pressAC(); return; }
+  if (S.justEq || S.newNum) return;
+  if (S.cur.length <= 1 || (S.cur.length === 2 && S.cur.startsWith('-'))) {
+    S.cur = '0';
+    S.newNum = false;
+  } else {
+    S.cur = S.cur.slice(0, -1);
+    if (S.cur === '-') S.cur = '0';
+  }
+  updateDisplay();
+}
+
+// ═══════════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════════
+function addHistory(a, op, b, result) {
+  const rFormatted = formatNum(String(result), false);
+  const entry = {
+    expr: `${formatNum(String(a), false)} ${op} ${formatNum(String(b), false)}`,
+    result: rFormatted,
+  };
+  S.history.unshift(entry);
+  if (S.history.length > 20) S.history.pop();
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!S.history.length) {
+    list.innerHTML = '<div style="color:rgba(255,255,255,0.2);font-size:.75rem;text-align:center;padding:8px;">Chưa có lịch sử</div>';
+    return;
+  }
+  list.innerHTML = S.history.map((h, i) =>
+    `<div class="history-item" onclick="recallHistory(${i})">
+      ${h.expr} <span class="h-result">= ${h.result}</span>
+    </div>`
+  ).join('');
+}
+
+function recallHistory(i) {
+  const h = S.history[i];
+  S.cur = String(parseFloat(h.result.replace('∞','Infinity')));
+  S.newNum = true;
+  S.justEq = true;
+  S.op = null;
+  S.prev = null;
+  highlightOp(null);
+  updateDisplay();
+}
+
+let histOpen = false;
+function toggleHistory() {
+  histOpen = !histOpen;
+  document.getElementById('history-strip').classList.toggle('open', histOpen);
+  renderHistory();
+}
+
+// ═══════════════════════════════════════════════════
+//  KEYBOARD SUPPORT
+// ═══════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  const k = e.key;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+  const numMap = {'0':1,'1':1,'2':1,'3':1,'4':1,'5':1,'6':1,'7':1,'8':1,'9':1};
+  if (numMap[k]) { pressNum(k); animBtn(k); }
+  else if (k === '.') { pressDot(); animBtn('.'); }
+  else if (k === '+') { pressOp('+'); }
+  else if (k === '-') { pressOp('−'); }
+  else if (k === '*') { pressOp('×'); }
+  else if (k === '/') { e.preventDefault(); pressOp('÷'); }
+  else if (k === 'Enter' || k === '=') { pressEquals(); animBtn('='); }
+  else if (k === 'Backspace') { pressBack(); }
+  else if (k === 'Escape') { pressAC(); }
+  else if (k === '%') { pressPercent(); }
+});
+
+function animBtn(key) {
+  // Find button by text content and briefly highlight
+  const btns = document.querySelectorAll('.btn');
+  for (const b of btns) {
+    if (b.textContent.trim() === key) {
+      b.style.filter = 'brightness(1.5)';
+      setTimeout(() => b.style.filter = '', 120);
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+updateDisplay();
+</script>
+</body>
+</html>
